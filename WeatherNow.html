@@ -1,0 +1,112 @@
+<HTML>
+<HEAD>
+	<TITLE>DARKSKY API WITH JQUERY</TITLE>
+	<script type = "text/javascript" 
+		src = "http://code.jquery.com/jquery-latest.js">
+	</script> 
+	<script type = "text/javascript" 
+		src = "https://maps.googleapis.com/maps/api/js?AIzaSyDhxtnjhLLSPK4bljMIUSeeCWIQ_ydRxfE&sensor=true">
+	</script>
+	<script type = "text/javascript"
+		src = "raphael-min.js">
+	</script>
+	<script type = "text/javascript"
+		src = "https://raw.github.com/DmitryBaranovskiy/g.raphael/master/min/g.raphael-min.js">
+	</script>
+	<script type = "text/javascript"
+		src = "https://raw.github.com/DmitryBaranovskiy/g.raphael/master/min/g.line-min.js">
+	</script>
+	<link href="weather_design.css" rel="stylesheet" type="text/css" />
+
+</HEAD>
+<BODY>
+<script>
+
+$(document).ready(function(){
+	//var paper = Raphael(200, 50, 320, 200);		// 320x200 canvas for graph
+	var r = Raphael("holder"),
+				txtattr = { font: "12px sans-serif" };
+				r.text(320/2, 230, "Intensity of Precipitation for Next Hour").attr(txtattr);
+	$('#submit').click(function(){
+		var zipCode = $('#zip').val();
+		$('#results').append("<p>Zip: "+zipCode+"</p>");
+		
+		var latitude;
+		var longitude;
+		$('#results').append("<p>Before Geocode</p>");
+		var geocoder = new google.maps.Geocoder();	//Use Google Maps to get Lon/Lat from Zip Code
+		$('#results').append("<p>After Geocode init</p>");
+		geocoder.geocode({'address': zipCode},		// ASYNC CALL, call needs to finish before using DarkSky
+			function(results, status){
+				if(status == google.maps.GeocoderStatus.OK)
+				{
+					$('#results').append("<p>LAT: "+results[0].geometry.location.lat()+" LON: "+results[0].geometry.location.lng()+" </p>");
+					latitude = results[0].geometry.location.lat();
+					longitude = results[0].geometry.location.lng();
+					getForecast(latitude,longitude);
+				}
+				else
+				{
+					$('#results').append("<p>Geocode Request Failed: "+status+"</p>");
+				}
+			}
+		);
+		$('#results').append("<p>After Geocode</p>");
+	});
+	function getForecast(LAT,LON){
+		var apiURL = 'https://api.darkskyapp.com/v1/forecast/c421e499ad9011f3f8c31f9704152d58/'+LAT+','+LON+'?callback=?';
+		$('#results').append("<p>"+apiURL+"</p>");
+		$.getJSON(apiURL, function(data){
+			$('#results').append("<p>Current Temp at "+LAT+', '+LON+": "+data.currentTemp);
+			var intensityArray = [];		//intensity of precipitation 
+			var probArray = [];				//probability of precipitation
+			var timeArray = [];				//times
+			$.each(data.hourPrecipitation,function(index, val){
+				intensityArray.push(val.intensity);
+				probArray.push(val.probability);
+				$('#results').append("<br>Intensity :"+val.intensity);
+				timeArray.push(index);
+			//	$('#results').append("<p>"+index+"Rain Probability:"+val.probability+" Rain Intensity: "+val.intensity+"Time: "+val.time+"</p>");
+			});	
+			$('#results').append("<p>"+"Int Array Size: "+intensityArray.length+" Probability Array Size: "+probArray.length+"</p>");
+			$('#currentTemp').html(data.currentTemp);
+			$('#hourSummary').html(data.hourSummary);
+			$('#daySummary').html(data.daySummary);
+			$('#holder').html(' ');
+			var r = Raphael("holder"),
+                    txtattr = { font: "12px sans-serif" };
+			r.text(320/2, 230, "Intensity of Precipitation for Next Hour").attr(txtattr);
+			r.linechart(0, 0, 320, 200, timeArray, [intensityArray], {shade: true, axis: '0,0,1,1', axisystep: 3, axisxstep:12.0});
+			//r.linechart(0, 0, 99, 99, [1,2,3,4,5], [[1,2,3,4,5], [1,3,9,16,25], [100,50,25,12,6]], {smooth: true, colors: ['#F00', '#0F0', '#FF0'], symbol: 'circle'});
+						
+		});
+	}
+});
+</script>
+
+<div id = "displayData" style = "display: table;">
+
+	<!-- <div id = "overview" style = "color:#0000FF;float:left;width:500;"> -->
+	<div id = "overview" style = "color:#0000FF;float:left; width:500; font-family:monospace;font-size:20;">
+		<ul style = "list-style: none">
+			<li><h3>Overview</h3></li>
+			<li>Current Temperature: <span id = "currentTemp">--</span></li>
+			<li>Summary for the hour: <span id = "hourSummary">--</span></li>
+			<li>Summary for the day: <span id = "daySummary">--</span></li>
+		</ul>
+	</div>
+	<div id = "holder" style = "float:left;"></div>
+
+	<!-- <div id = "holder" style = "float:left;height:300"></div>style = "float:bottom;" -->
+
+</div>
+<div id = "location" style = "float:bottom">
+	<center>
+	Zip Code: <textarea id = "zip" rows = "1" cols = "5"></textarea><br>
+	<!-- <input type = "button" id = "submit" value = "Get Forcast"> -->
+	<a href="#" id = "submit" class="button">Submit</a>
+	</center>
+</div>	
+<div id = "results"></div>
+</BODY>
+</HTML>
