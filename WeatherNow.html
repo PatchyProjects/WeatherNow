@@ -29,18 +29,18 @@ $(document).ready(function(){
 				r.text(320/2, 230, "Intensity of Precipitation for Next Hour").attr(txtattr);
 	$('#submit').click(function(){
 		var zipCode = $('#zip').val();
-		$('#results').append("<p>Zip: "+zipCode+"</p>");
+		//$('#results').append("<p>Zip: "+zipCode+"</p>");
 		
 		var latitude;
 		var longitude;
-		$('#results').append("<p>Before Geocode</p>");
+		//$('#results').append("<p>Before Geocode</p>");
 		var geocoder = new google.maps.Geocoder();	//Use Google Maps to get Lon/Lat from Zip Code
-		$('#results').append("<p>After Geocode init</p>");
+		//$('#results').append("<p>After Geocode init</p>");
 		geocoder.geocode({'address': zipCode},		// ASYNC CALL, call needs to finish before using DarkSky
 			function(results, status){
 				if(status == google.maps.GeocoderStatus.OK)
 				{
-					$('#results').append("<p>LAT: "+results[0].geometry.location.lat()+" LON: "+results[0].geometry.location.lng()+" </p>");
+					//$('#results').append("<p>LAT: "+results[0].geometry.location.lat()+" LON: "+results[0].geometry.location.lng()+" </p>");
 					latitude = results[0].geometry.location.lat();
 					longitude = results[0].geometry.location.lng();
 					getForecast(latitude,longitude);
@@ -51,24 +51,39 @@ $(document).ready(function(){
 				}
 			}
 		);
-		$('#results').append("<p>After Geocode</p>");
+		//$('#results').append("<p>After Geocode</p>");
 	});
 	function getForecast(LAT,LON){
 		var apiURL = 'https://api.darkskyapp.com/v1/forecast/c421e499ad9011f3f8c31f9704152d58/'+LAT+','+LON+'?callback=?';
-		$('#results').append("<p>"+apiURL+"</p>");
+		//$('#results').append("<p>"+apiURL+"</p>");
 		$.getJSON(apiURL, function(data){
-			$('#results').append("<p>Current Temp at "+LAT+', '+LON+": "+data.currentTemp);
+			// $('#results').append("<p>Current Temp at "+LAT+', '+LON+": "+data.currentTemp);
 			var intensityArray = [];		//intensity of precipitation 
 			var probArray = [];				//probability of precipitation
 			var timeArray = [];				//times
+			var maxIntensityArray = []; 	// Max intensity == 100, create array for graph Max
+		
+			//$('#results').html("<br>");			// Clears results div
 			$.each(data.hourPrecipitation,function(index, val){
-				intensityArray.push(val.intensity);
+				if(val.probability >= 0.5 && val.probability < 0.6)		// Good chance, but could be wrong, so make val smaller
+				{
+					intensityArray.push(val.intensity*val.probability);
+				}
+				else if(val.probability >= 0.6)
+				{
+					intensityArray.push(val.intensity);
+				}
+				else
+				{
+					intensityArray.push(0);
+				}
 				probArray.push(val.probability);
-				$('#results').append("<br>Intensity :"+val.intensity);
+				//$('#results').append("<br>Intensity :"+val.intensity+" Probability: "+val.probability);
 				timeArray.push(index);
+				maxIntensityArray.push(30);			// 100 is max, but makes graphed vals look insignificant, so this value is lowered
 			//	$('#results').append("<p>"+index+"Rain Probability:"+val.probability+" Rain Intensity: "+val.intensity+"Time: "+val.time+"</p>");
 			});	
-			$('#results').append("<p>"+"Int Array Size: "+intensityArray.length+" Probability Array Size: "+probArray.length+"</p>");
+			//$('#results').append("<p>"+"Int Array Size: "+intensityArray.length+" Probability Array Size: "+probArray.length+"</p>");
 			$('#currentTemp').html(data.currentTemp);
 			$('#hourSummary').html(data.hourSummary);
 			$('#daySummary').html(data.daySummary);
@@ -76,7 +91,7 @@ $(document).ready(function(){
 			var r = Raphael("holder"),
                     txtattr = { font: "12px sans-serif" };
 			r.text(320/2, 230, "Intensity of Precipitation for Next Hour").attr(txtattr);
-			r.linechart(0, 0, 320, 200, timeArray, [intensityArray], {shade: true, axis: '0,0,1,1', axisystep: 3, axisxstep:12.0});
+			r.linechart(0, 0, 320, 200, timeArray, [intensityArray, maxIntensityArray], {shade: true, colors: ['#00F', '#FFF'], axis: '0,0,1,0', axisystep: 3.0, axisxstep:12.0});
 			//r.linechart(0, 0, 99, 99, [1,2,3,4,5], [[1,2,3,4,5], [1,3,9,16,25], [100,50,25,12,6]], {smooth: true, colors: ['#F00', '#0F0', '#FF0'], symbol: 'circle'});
 						
 		});
@@ -105,6 +120,7 @@ $(document).ready(function(){
 	Zip Code: <textarea id = "zip" class = "inputText" rows = "1" cols = "5" maxlength = "5" wrap = "soft" style = "resize:none"></textarea><br>
 	<!-- <input type = "button" id = "submit" value = "Get Forcast"> -->
 	<a href="#" id = "submit" class="button">Submit</a>
+	<br><br>Powered by <a href = "http://darkskyapp.com/">DarkSky API</a>
 	</center>
 </div>	
 <div id = "results"></div>
